@@ -78,13 +78,20 @@ jobs:
         run: |
           terraform init
 
-          DO_RESP=$(curl "https://api.cloudflare.com/client/v4/accounts/$TF_VAR_CLOUDFLARE_ACCOUNT_ID/workers/durable_objects/namespaces?per_page=1000" \
+          # The DO migration (new_tag = "v1") may only be applied ONCE, at the
+          # worker's initial creation. If the worker already exists it is already
+          # at tag "v1", and re-sending the migration makes Cloudflare reject the
+          # apply with 412 / code 10079 ("Actor migration tag precondition failed,
+          # got tag '' when expected tag is 'v1'"). So gate the migration purely on
+          # worker-script existence, not on a (flaky) durable-object namespace query.
+          WORKER_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/accounts/$TF_VAR_CLOUDFLARE_ACCOUNT_ID/workers/scripts/uptimeflare_worker" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
 
-          if echo "$DO_RESP" | jq -e '.result[] | select(.script == "uptimeflare_worker" and .class == "RemoteChecker")' > /dev/null; then
-            echo "Existing Durable Object namespace found for uptimeflare_worker RemoteChecker. No migration needed."
+          if [[ "$WORKER_HTTP" == "200" ]]; then
+            echo "Worker uptimeflare_worker already exists (HTTP $WORKER_HTTP); DO migration v1 already applied. No migration needed."
           else
-            echo "No existing Durable Object namespace found for uptimeflare_worker RemoteChecker. Need migration."
+            echo "Worker uptimeflare_worker not found (HTTP $WORKER_HTTP). Applying initial DO migration."
             export TF_VAR_enable_do_migration=true
           fi
 
