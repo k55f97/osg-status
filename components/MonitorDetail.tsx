@@ -31,11 +31,11 @@ export default function MonitorDetail({
   let statusIcon =
     state.incident[monitor.id].slice(-1)[0].end === null ? (
       <IconAlertCircle
-        style={{ width: '1.25em', height: '1.25em', color: '#b91c1c', marginRight: '3px' }}
+        style={{ width: '1.25em', height: '1.25em', color: 'var(--osg-down)', marginRight: '3px' }}
       />
     ) : (
       <IconCircleCheck
-        style={{ width: '1.25em', height: '1.25em', color: '#059669', marginRight: '3px' }}
+        style={{ width: '1.25em', height: '1.25em', color: 'var(--osg-ok)', marginRight: '3px' }}
       />
     )
 
@@ -92,7 +92,11 @@ export default function MonitorDetail({
           monitorNameElement
         )}
 
-        <Text mt="sm" fw={700} style={{ display: 'inline', color: getColor(uptimePercent, true) }}>
+        <Text
+          mt="sm"
+          className="osg-uptime"
+          style={{ display: 'inline', color: getColor(uptimePercent, true) }}
+        >
           {t('Overall', { percent: uptimePercent })}
         </Text>
       </div>

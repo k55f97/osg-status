@@ -7,6 +7,9 @@ import { MaintenanceConfig, PageConfig, WorkerConfig } from './types/config'
 
 const pageConfig: PageConfig = {
   title: 'OpenShopGraph Status',
+  // Same icon the main site serves at openshopgraph.org/favicon.svg
+  // (replaces the UptimeFlare default favicon.png, now deleted).
+  favicon: '/favicon.svg',
   links: [
     { link: 'https://openshopgraph.org', label: 'openshopgraph.org', highlight: true },
   ],

@@ -103,10 +103,10 @@ export default function DetailBar({
       >
         <div
           style={{
-            height: '20px',
+            height: '32px',
             width: '7px',
             background: getColor(dayPercent, false),
-            borderRadius: '2px',
+            borderRadius: '3px',
             marginLeft: '1px',
             marginRight: '1px',
           }}

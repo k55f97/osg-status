@@ -1,16 +1,15 @@
+// Binary state colors (owner decision 2026-07-13): ONE healthy tone from the
+// openshopgraph.org palette (--ok), one incident red — no yellow/orange
+// gradations. Values are CSS custom properties defined in styles/osg-theme.css
+// so they follow the light/dark scheme automatically.
 function getColor(percent: number | string, darker: boolean): string {
   percent = Number(percent)
-  if (percent >= 99.9) {
-    return darker ? '#059669' : '#3bd671'
-  } else if (percent >= 99) {
-    return darker ? '#3bd671' : '#9deab8'
-  } else if (percent >= 95) {
-    return '#f29030'
-  } else if (Number.isNaN(percent)) {
-    return 'gray'
-  } else {
-    return '#df484a'
+  if (Number.isNaN(percent)) {
+    return 'var(--osg-nodata)'
   }
+  // A day/period with any real downtime (>~7 min on a day) counts as an
+  // incident; everything else renders in the single healthy tone.
+  return percent >= 99.5 ? 'var(--osg-ok)' : 'var(--osg-down)'
 }
 
 export { getColor }
