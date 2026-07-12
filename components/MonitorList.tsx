@@ -22,11 +22,12 @@ function countDownCount(state: MonitorState, ids: string[]) {
 function getStatusTextColor(state: MonitorState, ids: string[]) {
   let downCount = countDownCount(state, ids)
   if (downCount === 0) {
-    return '#059669'
+    return 'var(--osg-ok)'
   } else if (downCount === ids.length) {
-    return '#df484a'
+    return 'var(--osg-down)'
   } else {
-    return '#f29030'
+    // Partial outage still counts as an incident — binary palette, no orange.
+    return 'var(--osg-down)'
   }
 }
 

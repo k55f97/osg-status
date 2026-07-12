@@ -31,6 +31,13 @@
 }
 
 :root[data-mantine-color-scheme='light'] {
+  /* Monitor-state colors (util/color.ts): single healthy tone = the main
+     site's --ok green; incident red; neutral for "no data". Binary only —
+     no yellow/orange gradations (owner decision 2026-07-13). */
+  --osg-ok: #1f7a4d; /* --ok (site-tokens.css) */
+  --osg-down: #b91c1c;
+  --osg-nodata: #d6d3cb;
+
   --mantine-color-body: #f7f6f3; /* --paper */
   --mantine-color-text: #141412; /* --ink */
   --mantine-color-white: #ffffff; /* --card, Card/Paper surfaces */
@@ -43,6 +50,10 @@
 }
 
 :root[data-mantine-color-scheme='dark'] {
+  --osg-ok: #4caf82; /* --ok (dark) */
+  --osg-down: #e5534b;
+  --osg-nodata: #3a382f;
+
   --mantine-color-body: #161512; /* --paper (dark) */
   --mantine-color-text: #edeae3; /* --ink (dark) */
   --mantine-color-dark-6: #1e1d1a; /* --card (dark); Card surface */
@@ -88,6 +99,16 @@ body {
 .osg-status-label {
   font-weight: 500;
   color: var(--mantine-color-dimmed);
+}
+
+/* ---------- Prominent per-monitor uptime % (MonitorDetail.tsx) ---------- */
+.osg-uptime {
+  font-family: var(--font-facts);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 /* ---------- OSG footer line (Footer.tsx customFooter) ---------- */

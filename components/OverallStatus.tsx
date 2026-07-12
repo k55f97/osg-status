@@ -30,14 +30,14 @@ export default function OverallStatus({
   let groupedMonitor = (group && Object.keys(group).length > 0) || false
 
   let statusString = ''
-  let icon = <IconAlertCircle style={{ width: 64, height: 64, color: '#b91c1c' }} />
+  let icon = <IconAlertCircle style={{ width: 64, height: 64, color: 'var(--osg-down)' }} />
   if (state.overallUp === 0 && state.overallDown === 0) {
     statusString = t('No data yet')
   } else if (state.overallUp === 0) {
     statusString = t('All systems not operational')
   } else if (state.overallDown === 0) {
     statusString = t('All systems operational')
-    icon = <IconCircleCheck style={{ width: 64, height: 64, color: '#059669' }} />
+    icon = <IconCircleCheck style={{ width: 64, height: 64, color: 'var(--osg-ok)' }} />
   } else {
     statusString = t('Some systems not operational', {
       down: state.overallDown,
