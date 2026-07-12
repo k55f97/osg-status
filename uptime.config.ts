@@ -10,6 +10,11 @@ const pageConfig: PageConfig = {
   links: [
     { link: 'https://openshopgraph.org', label: 'openshopgraph.org', highlight: true },
   ],
+  // Chrome/copy only — swaps the default "made with UptimeFlare" line for
+  // one matching openshopgraph.org's footer tone ("Verified data, not
+  // ads."). Monitor semantics below are untouched.
+  customFooter:
+    '<p class="osg-footer">Verified data, not ads. Independent status page for <a href="https://openshopgraph.org" target="_blank" rel="noopener">openshopgraph.org</a> — powered by <a href="https://github.com/lyc8503/UptimeFlare" target="_blank" rel="noopener">UptimeFlare</a>.</p>',
 }
 
 const workerConfig: WorkerConfig = {

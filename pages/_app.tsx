@@ -1,4 +1,6 @@
 import '@mantine/core/styles.css'
+import '@/styles/osg-fonts.css'
+import '@/styles/osg-theme.css'
 import type { AppProps } from 'next/app'
 import { MantineProvider } from '@mantine/core'
 import NoSsr from '@/components/NoSsr'
