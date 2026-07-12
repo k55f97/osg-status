@@ -1,6 +1,5 @@
 import Head from 'next/head'
 
-import { Inter } from 'next/font/google'
 import { MonitorTarget } from '@/types/config'
 import { maintenances, pageConfig } from '@/uptime.config'
 import OverallStatus from '@/components/OverallStatus'
@@ -13,7 +12,6 @@ import { useTranslation } from 'react-i18next'
 import { CompactedMonitorStateWrapper, getFromStore } from '@/worker/src/store'
 
 export const runtime = 'experimental-edge'
-const inter = Inter({ subsets: ['latin'] })
 
 export default function Home({
   compactedStateStr,
@@ -48,7 +46,7 @@ export default function Home({
         <link rel="icon" href={pageConfig.favicon ?? '/favicon.png'} />
       </Head>
 
-      <main className={inter.className}>
+      <main>
         <Header />
 
         {state.lastUpdate === 0 ? (
