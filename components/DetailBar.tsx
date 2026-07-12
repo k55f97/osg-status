@@ -103,12 +103,12 @@ export default function DetailBar({
       >
         <div
           style={{
-            height: '32px',
-            width: '7px',
+            height: '42px',
+            width: '6px',
             background: getColor(dayPercent, false),
             borderRadius: '3px',
-            marginLeft: '1px',
-            marginRight: '1px',
+            marginLeft: '1.5px',
+            marginRight: '1.5px',
           }}
           onClick={() => {
             if (dayDownTime > 0) {
