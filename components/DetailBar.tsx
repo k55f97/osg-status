@@ -32,21 +32,12 @@ export default function DetailBar({
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  // Owner finding 2026-07-13 (mobile screenshot): with only ~2 days of
-  // monitoring history, the fixed 90-day window rendered ~88 grey no-data
-  // bars and 2 green ones — it read as "broken", not "new". Skip the days
-  // BEFORE monitoring started entirely (min 30 slots so a young page still
-  // has a substantial row); the row then fills right-to-left as real
-  // history accrues, like a young status.claude.com page would.
-  // Guard (2026-07-13 follow-up): monitors with NO incidents ever have no
-  // usable start timestamp here — the bound became NaN and the loop
-  // rendered ZERO bars (owner screenshot 17:17). Fall back to the 30-slot
-  // minimum in that case.
-  const daysSinceStart = Math.ceil((currentTime - montiorStartTime) / 86400)
-  const daysSinceMonitorStart = Number.isFinite(daysSinceStart)
-    ? Math.min(89, Math.max(29, daysSinceStart))
-    : 29
-  for (let i = daysSinceMonitorStart; i >= 0; i--) {
+  // Owner direction 2026-07-13 (status.claude.com reference, HTML
+  // inspected): fixed 30-day window with a legend row ("30 days ago —
+  // uptime% — Today") is clearer than any variable-length scheme.
+  let windowMonitorTime = 0
+  let windowDownTime = 0
+  for (let i = 29; i >= 0; i--) {
     const dayStart = Math.round(todayStart.getTime() / 1000) - i * 86400
     const dayEnd = dayStart + 86400
 
@@ -86,6 +77,8 @@ export default function DetailBar({
       }
     }
 
+    windowMonitorTime += Math.max(0, dayMonitorTime)
+    windowDownTime += Math.max(0, dayDownTime)
     const dayPercent = (((dayMonitorTime - dayDownTime) / dayMonitorTime) * 100).toPrecision(4)
 
     uptimePercentBars.push(
@@ -118,7 +111,9 @@ export default function DetailBar({
         <div
           style={{
             height: '42px',
-            width: '6px',
+            // claude.com-style: 30 bars share the full row width.
+            flex: '1 1 0',
+            minWidth: '4px',
             background: getColor(dayPercent, false),
             borderRadius: '3px',
             marginLeft: '1.5px',
@@ -164,10 +159,29 @@ export default function DetailBar({
           marginTop: '10px',
           marginBottom: '5px',
         }}
-        visibleFrom="540"
         ref={barRef}
       >
-        {uptimePercentBars.slice(Math.floor(Math.max(9 * 90 - barRect.width, 0) / 9), 90)}
+        {uptimePercentBars}
+      </Box>
+      <Box
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          fontSize: '13px',
+          opacity: 0.75,
+          marginBottom: '6px',
+        }}
+      >
+        <span>{t('30 days ago')}</span>
+        <span className="num">
+          {windowMonitorTime > 0
+            ? t('window uptime', {
+                percent: (((windowMonitorTime - windowDownTime) / windowMonitorTime) * 100).toPrecision(4),
+              })
+            : t('No Data')}
+        </span>
+        <span>{t('Today')}</span>
       </Box>
     </>
   )
