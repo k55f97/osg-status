@@ -38,10 +38,14 @@ export default function DetailBar({
   // BEFORE monitoring started entirely (min 30 slots so a young page still
   // has a substantial row); the row then fills right-to-left as real
   // history accrues, like a young status.claude.com page would.
-  const daysSinceMonitorStart = Math.min(
-    89,
-    Math.max(29, Math.ceil((currentTime - montiorStartTime) / 86400))
-  )
+  // Guard (2026-07-13 follow-up): monitors with NO incidents ever have no
+  // usable start timestamp here — the bound became NaN and the loop
+  // rendered ZERO bars (owner screenshot 17:17). Fall back to the 30-slot
+  // minimum in that case.
+  const daysSinceStart = Math.ceil((currentTime - montiorStartTime) / 86400)
+  const daysSinceMonitorStart = Number.isFinite(daysSinceStart)
+    ? Math.min(89, Math.max(29, daysSinceStart))
+    : 29
   for (let i = daysSinceMonitorStart; i >= 0; i--) {
     const dayStart = Math.round(todayStart.getTime() / 1000) - i * 86400
     const dayEnd = dayStart + 86400
