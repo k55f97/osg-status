@@ -45,6 +45,20 @@ export default function OverallStatus({
     })
   }
 
+  // Banner styling (green when all-ok, red when down, amber when partial).
+  let bannerBg = 'var(--osg-ok)'
+  let bannerFg = '#fff'
+  let bannerIcon = <IconCircleCheck style={{ width: 28, height: 28, color: '#fff', flex: '0 0 auto' }} />
+  if (state.overallUp === 0 && state.overallDown === 0) {
+    bannerBg = 'var(--osg-nodata, #9aa0ad)'
+  } else if (state.overallUp === 0) {
+    bannerBg = 'var(--osg-down)'
+    bannerIcon = <IconAlertCircle style={{ width: 28, height: 28, color: '#fff', flex: '0 0 auto' }} />
+  } else if (state.overallDown > 0) {
+    bannerBg = 'var(--osg-degraded, #d98a2b)'
+    bannerIcon = <IconAlertCircle style={{ width: 28, height: 28, color: '#fff', flex: '0 0 auto' }} />
+  }
+
   const [openTime] = useState(Math.round(Date.now() / 1000))
   const [currentTime, setCurrentTime] = useState(Math.round(Date.now() / 1000))
   const isWindowVisible = useWindowVisibility()
@@ -86,12 +100,27 @@ export default function OverallStatus({
     }))
 
   return (
-    <Container size="md" mt="xl">
-      <Center>{icon}</Center>
-      <Title mt="sm" style={{ textAlign: 'center' }} order={1}>
-        {statusString}
-      </Title>
-      <Title mt="sm" style={{ textAlign: 'center', color: '#70778c' }} order={5}>
+    <Container size="md" mt="md">
+      {/* claude.com-style prominent status banner (owner 2026-07-13: the
+          small centred check-icon left too much empty space above and read
+          weaker than status.claude.com's full-width banner). */}
+      <Box
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          padding: '18px 22px',
+          borderRadius: '10px',
+          background: bannerBg,
+          color: bannerFg,
+        }}
+      >
+        {bannerIcon}
+        <Title order={2} style={{ margin: 0, color: bannerFg, fontWeight: 650 }}>
+          {statusString}
+        </Title>
+      </Box>
+      <Title mt="xs" style={{ textAlign: 'center', color: '#70778c' }} order={6}>
         {t('Last updated on', {
           date: new Date(state.lastUpdate * 1000).toLocaleString(),
           seconds: currentTime - state.lastUpdate,
