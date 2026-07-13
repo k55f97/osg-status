@@ -33,5 +33,8 @@
   "All": "Tous",
   "Select monitor": "Sélectionner un moniteur",
   "Backwards": "← Précédent",
-  "Forward": "Suivant →"
+  "Forward": "Suivant →",
+  "30 days ago": "30 days ago",
+  "window uptime": "{{percent}} % uptime",
+  "Today": "Today"
 }

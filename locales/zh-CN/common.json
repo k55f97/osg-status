@@ -33,5 +33,8 @@
   "All": "全部",
   "Select monitor": "选择监控",
   "Backwards": "← 上一月",
-  "Forward": "下一月 →"
+  "Forward": "下一月 →",
+  "30 days ago": "30 天前",
+  "window uptime": "{{percent}} % 在线率",
+  "Today": "今天"
 }
