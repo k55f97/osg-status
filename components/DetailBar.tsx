@@ -32,7 +32,17 @@ export default function DetailBar({
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  for (let i = 89; i >= 0; i--) {
+  // Owner finding 2026-07-13 (mobile screenshot): with only ~2 days of
+  // monitoring history, the fixed 90-day window rendered ~88 grey no-data
+  // bars and 2 green ones — it read as "broken", not "new". Skip the days
+  // BEFORE monitoring started entirely (min 30 slots so a young page still
+  // has a substantial row); the row then fills right-to-left as real
+  // history accrues, like a young status.claude.com page would.
+  const daysSinceMonitorStart = Math.min(
+    89,
+    Math.max(29, Math.ceil((currentTime - montiorStartTime) / 86400))
+  )
+  for (let i = daysSinceMonitorStart; i >= 0; i--) {
     const dayStart = Math.round(todayStart.getTime() / 1000) - i * 86400
     const dayEnd = dayStart + 86400
 
