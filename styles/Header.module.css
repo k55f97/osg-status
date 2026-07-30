@@ -1,12 +1,14 @@
 .header {
-  height: rem(56px);
+  /* min-height, not height: a fixed height cannot contain a taller nav row, it
+     only clips it. That is how "Incidents" ended up cut off at 390px. */
+  min-height: rem(56px);
   margin-bottom: rem(100px);
   background-color: var(--mantine-color-body);
   border-bottom: rem(1px) solid var(--mantine-color-default-border);
 }
 
 .inner {
-  height: rem(56px);
+  min-height: rem(56px);
   display: flex;
   justify-content: space-between;
   align-items: center;

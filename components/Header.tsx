@@ -4,6 +4,9 @@ import { pageConfig } from '@/uptime.config'
 import { PageConfigLink } from '@/types/config'
 import { useTranslation } from 'react-i18next'
 
+// Target of the wordmark on the left. Nav links pointing here are duplicates.
+const BRAND_LINK = 'https://openshopgraph.org'
+
 // OSG brand mark — same two-dot "connect" glyph as the wordmark on
 // openshopgraph.org (BaseLayout.astro .top-brand .mark svg).
 function OsgMark() {
@@ -41,6 +44,17 @@ export default function Header({ style }: { style?: React.CSSProperties }) {
 
   const links = [{ label: t('Incidents'), link: '/incidents' }, ...(pageConfig.links || [])]
 
+  // On narrow viewports the row is: wordmark + nav. Measured at 360px, adding
+  // the 150px "openshopgraph.org" link — which points exactly where the
+  // wordmark already points — wrapped the nav onto a second line: 65px of
+  // content inside a 56px header (clipping "Incidents") plus 11px of horizontal
+  // page overflow. Dropping the duplicate is what makes it fit; see the
+  // min-height in Header.module.css for the guard against the next long label.
+  const compactLinks = links.filter(
+    (link) =>
+      link.link.replace(/\/$/, '') !== BRAND_LINK && (link.highlight || link.link.startsWith('/'))
+  )
+
   return (
     <header className={classes.header} style={style}>
       <Container size="md" className={classes.inner}>
@@ -57,7 +71,7 @@ export default function Header({ style }: { style?: React.CSSProperties }) {
         </Group>
 
         <Group gap={5} hiddenFrom="sm">
-          {links?.filter((link) => link.highlight || link.link.startsWith('/')).map(linkToElement)}
+          {compactLinks.map(linkToElement)}
         </Group>
       </Container>
     </header>
