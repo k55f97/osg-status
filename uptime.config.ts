@@ -10,9 +10,7 @@ const pageConfig: PageConfig = {
   // Same icon the main site serves at openshopgraph.org/favicon.svg
   // (replaces the UptimeFlare default favicon.png, now deleted).
   favicon: '/favicon.svg',
-  links: [
-    { link: 'https://openshopgraph.org', label: 'openshopgraph.org', highlight: true },
-  ],
+  links: [{ link: 'https://openshopgraph.org', label: 'openshopgraph.org', highlight: true }],
   // Chrome/copy only — swaps the default "made with UptimeFlare" line for
   // one matching openshopgraph.org's footer tone ("Verified data, not
   // ads."). Monitor semantics below are untouched.
@@ -61,6 +59,57 @@ const workerConfig: WorkerConfig = {
     // They stay on the internal admin view (public-admin behind Cloudflare
     // Access) fed by the Mini collectors. If a stable tunnel hostname for
     // Mini health is created later, add it here as an HTTP monitor.
+
+    // ---------------------------------------------------------------------
+    // PREPARED, DELIBERATELY NOT ENABLED: checks from more than one region.
+    //
+    // Measured 2026-07-30 from the live state: 435 of 435 latency samples
+    // (145 per monitor, the 12h window) carry loc "LHR" — London, not
+    // Frankfurt as previously reported. Every monitor above omits
+    // `checkProxy`, so each check runs in whatever colo the cron worker was
+    // scheduled in. One vantage point cannot distinguish "the service is
+    // down" from "the route from this one colo is down".
+    //
+    // How it actually works (worker/src/monitor.ts:361-400): `checkProxy` is
+    // ONE value per monitor, not a list. Multiple regions therefore mean one
+    // monitor entry PER region — which is configuration, but it multiplies
+    // both the checks per minute and the rows rendered on the public page.
+    //   'worker://<hint>'  -> REMOTE_CHECKER_DO with a DurableObjectLocationHint:
+    //                         wnam | enam | sam | weur | eeur | apac | oc | afr | me
+    //   'globalping://...' -> Globalping probes instead of a Cloudflare DO
+    //
+    // Decision the owner has to make before this is switched on:
+    // `checkProxyFallback: true` re-checks locally when the proxy itself
+    // fails; without it a broken probe is recorded as `up: false` with
+    // "Unknown check proxy error" (monitor.ts:394-400) — i.e. a probe outage
+    // would be published as a service outage. Leave it true unless we want
+    // the opposite.
+    //
+    // {
+    //   id: 'website_enam',
+    //   name: 'Website (North America)',
+    //   method: 'GET',
+    //   target: 'https://openshopgraph.org/en/',
+    //   tooltip: 'Public website, checked from North America',
+    //   expectedCodes: [200],
+    //   timeout: 10000,
+    //   headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+    //   checkProxy: 'worker://enam',
+    //   checkProxyFallback: true,
+    // },
+    // {
+    //   id: 'website_apac',
+    //   name: 'Website (Asia-Pacific)',
+    //   method: 'GET',
+    //   target: 'https://openshopgraph.org/en/',
+    //   tooltip: 'Public website, checked from Asia-Pacific',
+    //   expectedCodes: [200],
+    //   timeout: 10000,
+    //   headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+    //   checkProxy: 'worker://apac',
+    //   checkProxyFallback: true,
+    // },
+    // ---------------------------------------------------------------------
   ],
   notification: {
     // Wire Pushover here (same account as ops/minimax-usage.sh) — needs the
