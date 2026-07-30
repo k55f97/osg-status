@@ -1,0 +1,85 @@
+# PR gate for status.openshopgraph.org.
+#
+# Until now this repository had NO pull-request CI at all: deploy.yml runs
+# `on: push` to main only, so a broken build was first discovered while it was
+# already deploying to production. This workflow moves that discovery to the
+# pull request.
+#
+# RUNNER CHOICE — GitHub-hosted, deliberately, unlike openshopgraph/
+# openshopgraph2 which run `verify` on the self-hosted Mac mini:
+#   * This repository is PUBLIC (a fork of lyc8503/UptimeFlare). A self-hosted
+#     runner on a public repo executes unreviewed fork-PR code on our own
+#     hardware — the exact trust boundary the osg2 CI header calls out as the
+#     reason self-hosted is acceptable *there* ("private and solo"). It is not
+#     acceptable here.
+#   * The cost argument that motivates self-hosted elsewhere does not apply:
+#     GitHub Actions minutes are free for public repositories, so this gate
+#     costs $0 as well. deploy.yml already runs on ubuntu-latest.
+#
+# SCOPE — build + lint. `prettier --check .` is intentionally NOT part of this
+# gate yet: 14 files in main are currently unformatted, so the check would be
+# red on arrival and block every PR. Reformatting them is a separate change
+# (it collides with the open PR #10 on components/ and locales/).
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One PR, one run: cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Build page (next build)
+        run: npm run build
+
+      # The worker is deployed from worker/ by deploy.yml; a type error there
+      # breaks production just as hard as one in the page, so it is compiled
+      # here too — dry-run only, no Cloudflare credentials, no deploy.
+      - name: Build worker (dry run)
+        working-directory: worker
+        run: |
+          npm ci
+          npx wrangler deploy src/index.ts --outdir dist --dry-run
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Lint (next lint)
+        run: npm run lint
