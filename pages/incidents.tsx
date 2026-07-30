@@ -9,8 +9,12 @@ import { useEffect, useState } from 'react'
 import MaintenanceAlert from '@/components/MaintenanceAlert'
 import NoIncidentsAlert from '@/components/NoIncidents'
 import { useTranslation } from 'react-i18next'
+import { CompactedMonitorStateWrapper, getFromStore } from '@/worker/src/store'
+import { detectedIncidentsForMonth } from '@/util/incidents'
 
 export const runtime = 'experimental-edge'
+
+type IncidentEntry = Omit<MaintenanceConfig, 'monitors'> & { monitors: MonitorTarget[] }
 
 function getSelectedMonth() {
   const hash = window.location.hash.replace('#', '')
@@ -21,11 +25,11 @@ function getSelectedMonth() {
   return hash.split('-').splice(0, 2).join('-')
 }
 
-function filterIncidentsByMonth(
+function filterMaintenancesByMonth(
   incidents: MaintenanceConfig[],
   monthStr: string,
   monitors: MonitorTarget[]
-): (Omit<MaintenanceConfig, 'monitors'> & { monitors: MonitorTarget[] })[] {
+): IncidentEntry[] {
   return incidents
     .filter((incident) => {
       const d = new Date(incident.start)
@@ -36,7 +40,6 @@ function filterIncidentsByMonth(
       ...e,
       monitors: (e.monitors || []).map((e) => monitors.find((mon) => mon.id === e)!),
     }))
-    .sort((a, b) => (new Date(a.start) > new Date(b.start) ? -1 : 1))
 }
 
 function getPrevNextMonth(monthStr: string) {
@@ -52,7 +55,13 @@ function getPrevNextMonth(monthStr: string) {
   }
 }
 
-export default function IncidentsPage({ monitors }: { monitors: MonitorTarget[] }) {
+export default function IncidentsPage({
+  compactedStateStr,
+  monitors,
+}: {
+  compactedStateStr: string | null
+  monitors: MonitorTarget[]
+}) {
   const { t } = useTranslation('common')
   const [selectedMonitor, setSelectedMonitor] = useState<string | null>('')
   const [selectedMonth, setSelectedMonth] = useState(getSelectedMonth())
@@ -63,9 +72,31 @@ export default function IncidentsPage({ monitors }: { monitors: MonitorTarget[] 
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  const filteredIncidents = filterIncidentsByMonth(maintenances, selectedMonth, monitors)
+  const state = new CompactedMonitorStateWrapper(compactedStateStr)
+  // lastUpdate === 0 means the wrapper fell back to an empty state because the
+  // store gave us nothing. That is "we don't know", not "nothing happened".
+  const hasMonitorState = state.data.lastUpdate !== 0
+
+  const recordedIncidents: IncidentEntry[] = detectedIncidentsForMonth(
+    state,
+    selectedMonth,
+    monitors
+  ).map((incident) => ({
+    title: t('Outage of', { name: incident.monitor.name }),
+    body: incident.reasons.join('\n'),
+    start: incident.start,
+    end: incident.end,
+    color: 'red',
+    monitors: [incident.monitor],
+  }))
+
+  const filteredIncidents = [
+    ...recordedIncidents,
+    ...filterMaintenancesByMonth(maintenances, selectedMonth, monitors),
+  ].sort((a, b) => (new Date(a.start) > new Date(b.start) ? -1 : 1))
+
   const monitorFilteredIncidents = selectedMonitor
-    ? filteredIncidents.filter((i) => i.monitors.find((e) => e.id === selectedMonitor))
+    ? filteredIncidents.filter((i) => i.monitors.find((e) => e?.id === selectedMonitor))
     : filteredIncidents
 
   const { prev, next } = getPrevNextMonth(selectedMonth)
@@ -104,7 +135,9 @@ export default function IncidentsPage({ monitors }: { monitors: MonitorTarget[] 
               />
             </Group>
             <Box>
-              {monitorFilteredIncidents.length === 0 ? (
+              {!hasMonitorState ? (
+                <NoIncidentsAlert noData />
+              ) : monitorFilteredIncidents.length === 0 ? (
                 <NoIncidentsAlert />
               ) : (
                 monitorFilteredIncidents.map((incident, i) => (
@@ -133,10 +166,16 @@ export default function IncidentsPage({ monitors }: { monitors: MonitorTarget[] 
 
 export async function getServerSideProps() {
   const { workerConfig } = await import('@/uptime.config')
+  // Read state as string from storage, to avoid hitting server-side cpu time limit.
+  // Without this the page could only ever render hand-written maintenances and
+  // reported "No incidents in this month" next to a 99.95% uptime figure that was
+  // computed from the very outages it was hiding.
+  const compactedStateStr = await getFromStore(process.env as any, 'state')
+
   // Only present these values to client
   const monitors: MonitorTarget[] = workerConfig.monitors.map((monitor) => ({
     id: monitor.id,
     name: monitor.name,
   })) as MonitorTarget[]
-  return { props: { monitors } }
+  return { props: { compactedStateStr, monitors } }
 }
