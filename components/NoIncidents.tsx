@@ -1,12 +1,24 @@
 import { Alert, Text } from '@mantine/core'
-import { IconInfoCircle } from '@tabler/icons-react'
+import { IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 
-export default function NoIncidentsAlert({ style }: { style?: React.CSSProperties }) {
+/**
+ * Empty state of the incidents list.
+ *
+ * `noData` separates "we looked and there was nothing" from "we could not look".
+ * Without that distinction a broken data path renders as a clean bill of health.
+ */
+export default function NoIncidentsAlert({
+  style,
+  noData = false,
+}: {
+  style?: React.CSSProperties
+  noData?: boolean
+}) {
   const { t } = useTranslation('common')
   return (
     <Alert
-      icon={<IconInfoCircle />}
+      icon={noData ? <IconAlertTriangle /> : <IconInfoCircle />}
       title={
         <span
           style={{
@@ -14,10 +26,10 @@ export default function NoIncidentsAlert({ style }: { style?: React.CSSPropertie
             fontWeight: 700,
           }}
         >
-          {t('No incidents in this month')}
+          {noData ? t('No incident data') : t('No incidents in this month')}
         </span>
       }
-      color="gray"
+      color={noData ? 'orange' : 'gray'}
       withCloseButton={false}
       style={{
         position: 'relative',
@@ -25,7 +37,9 @@ export default function NoIncidentsAlert({ style }: { style?: React.CSSPropertie
         ...style,
       }}
     >
-      <Text>{t('There are no incidents for this month')}</Text>
+      <Text>
+        {noData ? t('Incident data unavailable') : t('There are no incidents for this month')}
+      </Text>
     </Alert>
   )
 }
