@@ -39,5 +39,6 @@
   "Forward": "Forward →",
   "30 days ago": "30 days ago",
   "window uptime": "{{percent}} % uptime",
-  "Today": "Today"
+  "Today": "Today",
+  "Checked from": "Checked from {{location}}"
 }
