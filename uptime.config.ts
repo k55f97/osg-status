@@ -61,54 +61,52 @@ const workerConfig: WorkerConfig = {
     // Mini health is created later, add it here as an HTTP monitor.
 
     // ---------------------------------------------------------------------
-    // PREPARED, DELIBERATELY NOT ENABLED: checks from more than one region.
+    // SECOND CHECK REGION — exactly one, for the website only.
     //
-    // Measured 2026-07-30 from the live state: 435 of 435 latency samples
-    // (145 per monitor, the 12h window) carry loc "LHR" — London, not
-    // Frankfurt as previously reported. Every monitor above omits
-    // `checkProxy`, so each check runs in whatever colo the cron worker was
-    // scheduled in. One vantage point cannot distinguish "the service is
-    // down" from "the route from this one colo is down".
+    // Why: measured 2026-07-31 from the live compacted state, 456 of 456
+    // latency samples (152 per monitor, the 12h window) carry loc "LHR" —
+    // a single run-length entry per monitor, no second value. Every monitor
+    // above omits `checkProxy`, so each check runs in whatever colo the cron
+    // worker was scheduled in. One vantage point cannot distinguish "the
+    // service is down" from "the route from this one colo is down".
     //
-    // How it actually works (worker/src/monitor.ts:361-400): `checkProxy` is
-    // ONE value per monitor, not a list. Multiple regions therefore mean one
-    // monitor entry PER region — which is configuration, but it multiplies
-    // both the checks per minute and the rows rendered on the public page.
+    // How it works (worker/src/monitor.ts:361-401): `checkProxy` is ONE
+    // value per monitor, not a list. A second region therefore means one
+    // extra monitor entry, not an extra field.
     //   'worker://<hint>'  -> REMOTE_CHECKER_DO with a DurableObjectLocationHint:
     //                         wnam | enam | sam | weur | eeur | apac | oc | afr | me
     //   'globalping://...' -> Globalping probes instead of a Cloudflare DO
     //
-    // Decision the owner has to make before this is switched on:
-    // `checkProxyFallback: true` re-checks locally when the proxy itself
-    // fails; without it a broken probe is recorded as `up: false` with
-    // "Unknown check proxy error" (monitor.ts:394-400) — i.e. a probe outage
-    // would be published as a service outage. Leave it true unless we want
-    // the opposite.
+    // `checkProxyFallback: true` is MANDATORY here, not cosmetic. Without it
+    // monitor.ts:397-400 records a failure of the PROBE as `up: false` with
+    // "Unknown check proxy error" — a probe outage would be published as a
+    // service outage (fail-closed on the wrong axis). With it, monitor.ts:395-396
+    // re-checks the target locally and the run is reported from the local
+    // colo, so the page never claims a region it did not actually measure.
     //
-    // {
-    //   id: 'website_enam',
-    //   name: 'Website (North America)',
-    //   method: 'GET',
-    //   target: 'https://openshopgraph.org/en/',
-    //   tooltip: 'Public website, checked from North America',
-    //   expectedCodes: [200],
-    //   timeout: 10000,
-    //   headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
-    //   checkProxy: 'worker://enam',
-    //   checkProxyFallback: true,
-    // },
-    // {
-    //   id: 'website_apac',
-    //   name: 'Website (Asia-Pacific)',
-    //   method: 'GET',
-    //   target: 'https://openshopgraph.org/en/',
-    //   tooltip: 'Public website, checked from Asia-Pacific',
-    //   expectedCodes: [200],
-    //   timeout: 10000,
-    //   headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
-    //   checkProxy: 'worker://apac',
-    //   checkProxyFallback: true,
-    // },
+    // Load — count the RPC calls, not the checks. monitor.ts:369-378 makes
+    // TWO calls on the DO stub per check: `getLocationAndStatus()` and then
+    // `kill()`. Cloudflare bills every RPC method call on a stub as its own
+    // session, i.e. as one request. Cron is `* * * * *` (deploy.tf:64-69),
+    // so this one extra monitor costs 2 x 1440 = 2,880 DO requests/day.
+    // Free plan cap: 100,000 DO requests/day -> 2.88% used, and room for
+    // about 34 region monitors in total, not ~69. Add them one at a time.
+    {
+      id: 'website_enam',
+      name: 'Website (North America)',
+      method: 'GET',
+      target: 'https://openshopgraph.org/en/',
+      tooltip: 'Public website, checked from a North American vantage point',
+      statusPageLink: 'https://openshopgraph.org',
+      expectedCodes: [200],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+      checkProxy: 'worker://enam',
+      // See above — never remove this without removing checkProxy too.
+      checkProxyFallback: true,
+    },
+    // Further regions (apac, weur, …) stay OFF until this one has carried a
+    // full window cleanly. Same shape, one entry each, fallback always true.
     // ---------------------------------------------------------------------
   ],
   notification: {

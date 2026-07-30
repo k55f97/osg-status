@@ -4,6 +4,7 @@ import { IconAlertCircle, IconAlertTriangle, IconCircleCheck } from '@tabler/ico
 import DetailChart from './DetailChart'
 import DetailBar from './DetailBar'
 import { getColor } from '@/util/color'
+import { codeToCountry } from '@/util/iata'
 import { maintenances } from '@/uptime.config'
 import { useTranslation } from 'react-i18next'
 
@@ -64,6 +65,14 @@ export default function MonitorDetail({
 
   const uptimePercent = (((totalTime - downTime) / totalTime) * 100).toPrecision(4)
 
+  // Where the most recent check actually ran. Until now this was only in the
+  // latency-chart hover tooltip, i.e. invisible on touch devices — and with
+  // more than one check region the reader has to be able to tell the rows
+  // apart without a mouse. Read from the measurement itself, never from the
+  // configured region, so a fallback run (monitor.ts:395-396, local re-check
+  // after a probe failure) is reported as the location it really came from.
+  const lastLoc = state.latency[monitor.id].slice(-1)[0]?.loc
+
   // Conditionally render monitor name with or without hyperlink based on monitor.url presence
   const monitorNameElement = (
     <Text mt="sm" fw={700} style={{ display: 'inline-flex', alignItems: 'center' }}>
@@ -100,6 +109,12 @@ export default function MonitorDetail({
           {t('Overall', { percent: uptimePercent })}
         </Text>
       </div>
+
+      {lastLoc && (
+        <Text size="xs" c="dimmed" mt={2}>
+          {t('Checked from', { location: codeToCountry(lastLoc) })}
+        </Text>
+      )}
 
       <DetailBar monitor={monitor} state={state} />
       {!monitor.hideLatencyChart && <DetailChart monitor={monitor} state={state} />}
