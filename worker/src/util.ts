@@ -1,5 +1,6 @@
 import { MonitorTarget, WebhookConfig } from '../../types/config'
 import { maintenances, workerConfig } from '../../uptime.config'
+import { pushoverNotify, PushoverEnv } from './pushover'
 
 async function getWorkerLocation() {
   const res = await fetch('https://cloudflare.com/cdn-cgi/trace')
@@ -148,6 +149,11 @@ async function webhookNotify(webhook: WebhookConfig, message: string) {
 
 // Auxiliary function to format notification and send it via webhook
 const formatAndNotify = async (
+  // `env` carries the Worker secret bindings for credential-based channels
+  // (Pushover). It is optional so that callers/tests without an env still
+  // compile; a missing env is treated as "credential missing" and is reported
+  // loudly by pushoverNotify rather than silently skipped.
+  env: PushoverEnv | undefined,
   monitor: MonitorTarget,
   isUp: boolean,
   timeIncidentStart: number,
@@ -176,19 +182,26 @@ const formatAndNotify = async (
     return
   }
 
+  const notification = formatStatusChangeNotification(
+    monitor,
+    isUp,
+    timeIncidentStart,
+    timeNow,
+    reason,
+    workerConfig.notification?.timeZone ?? 'Etc/GMT'
+  )
+
+  // Channel 1 (upstream): generic webhook, credentials would live in the
+  // committed config — unusable for this PUBLIC repo, so normally unset.
   if (workerConfig.notification?.webhook) {
-    const notification = formatStatusChangeNotification(
-      monitor,
-      isUp,
-      timeIncidentStart,
-      timeNow,
-      reason,
-      workerConfig.notification?.timeZone ?? 'Etc/GMT'
-    )
     await webhookNotify(workerConfig.notification.webhook, notification)
-  } else {
-    console.log(`Webhook not set, skipping notification for ${monitor.name}`)
   }
+
+  // Channel 2 (fork): Pushover with credentials from Worker secret bindings.
+  // Always attempted. If the secrets are missing this does NOT fall through
+  // quietly — it logs an error naming the missing secret, so an unnotifiable
+  // outage is itself visible in the logs.
+  await pushoverNotify(env, notification, isUp, monitor.name)
 }
 
 export {

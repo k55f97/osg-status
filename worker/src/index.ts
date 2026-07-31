@@ -15,6 +15,12 @@ import pLimit from 'p-limit'
 export interface Env {
   REMOTE_CHECKER_DO: DurableObjectNamespace<RemoteChecker>
   UPTIMEFLARE_D1: D1Database
+  // Pushover alert channel (worker/src/pushover.ts). Bound as Worker SECRETS
+  // by deploy.tf from the GitHub repository secrets of the same name — never
+  // committed, this repository is public. Optional in the type on purpose:
+  // when they are absent the run must still work and must SAY they are absent.
+  PUSHOVER_TOKEN?: string
+  PUSHOVER_USER?: string
 }
 
 const Worker = {
@@ -88,7 +94,14 @@ const Worker = {
               currentTimeSecond - lastIncident.start[0] >=
                 (workerConfig.notification.gracePeriod + 1) * 60 - 30
             ) {
-              await formatAndNotify(monitor, true, lastIncident.start[0], currentTimeSecond, 'OK')
+              await formatAndNotify(
+                env,
+                monitor,
+                true,
+                lastIncident.start[0],
+                currentTimeSecond,
+                'OK'
+              )
             } else {
               console.log(
                 `grace period (${workerConfig.notification?.gracePeriod}m) not met, skipping webhook UP notification for ${monitor.name}`
@@ -156,6 +169,7 @@ const Worker = {
               )
             } else {
               await formatAndNotify(
+                env,
                 monitor,
                 false,
                 currentIncident.start[0],

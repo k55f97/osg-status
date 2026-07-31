@@ -106,6 +106,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
           D1_ID: ${{ env.D1_ID }}
+          # Alert channel (worker/src/pushover.ts). If these repository secrets
+          # are unset the apply still succeeds, the bindings are simply omitted,
+          # and the worker logs "[ALERT-CHANNEL-BROKEN] … missing Worker
+          # secret(s) …" for every alert it could not deliver.
+          TF_VAR_PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          TF_VAR_PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
 
       # Currently Terraform Cloudflare provider doesn't support direct upload, use wrangler to upload instead.
       - name: Upload pages

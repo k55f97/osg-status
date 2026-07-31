@@ -110,14 +110,22 @@ const workerConfig: WorkerConfig = {
     // ---------------------------------------------------------------------
   ],
   notification: {
-    // Wire Pushover here (same account as ops/minimax-usage.sh) — needs the
-    // owner's Pushover token/user key; do not commit real keys, use the
-    // full-config option of reading from env if desired.
-    // webhook: {
-    //   url: 'https://api.pushover.net/1/messages.json',
-    //   payloadType: 'x-www-form-urlencoded',
-    //   payload: { token: 'APP_TOKEN', user: 'USER_KEY', message: '$MSG' },
-    // },
+    // ALERT CHANNEL — Pushover, wired in worker/src/pushover.ts.
+    //
+    // `webhook` stays UNSET here on purpose and is not a gap: the upstream
+    // webhook path (worker/src/util.ts:83) reads its credentials out of THIS
+    // committed object, and this repository is public, so a Pushover app token
+    // and user key cannot live here. The fork sends the identical formatted
+    // message from Worker SECRET bindings instead (PUSHOVER_TOKEN /
+    // PUSHOVER_USER, see worker/src/index.ts Env and deploy.tf).
+    //
+    // Everything below still applies to it: it is dispatched by the same
+    // `formatAndNotify`, so skipNotificationIds, maintenance windows and the
+    // grace period gate Pushover exactly as they gated the webhook.
+    //
+    // If the secrets are not set, the channel is FAIL-CLOSED AND LOUD: every
+    // dropped alert logs `[ALERT-CHANNEL-BROKEN] … missing Worker secret(s) …`
+    // as an error, so an outage nobody could be told about is itself visible.
     timeZone: 'Europe/Berlin',
     // Avoid flapping alerts: notify only after 3 consecutive failed checks.
     gracePeriod: 3,
