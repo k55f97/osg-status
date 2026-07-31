@@ -2,8 +2,14 @@ import { DurableObject } from 'cloudflare:workers'
 import { MonitorTarget } from '../../types/config'
 import { workerConfig } from '../../uptime.config'
 import { doMonitor, getStatus } from './monitor'
-import { formatAndNotify, getWorkerLocation } from './util'
+import { formatAndNotify, getWorkerLocation, webhookNotify } from './util'
 import { CompactedMonitorStateWrapper, getFromStore, setToStore } from './store'
+import {
+  evaluateProbe,
+  formatProbeDriftNotification,
+  formatProbeRecoveryNotification,
+  PROBE_DRIFT_RUNS,
+} from './probe'
 import pLimit from 'p-limit'
 
 export interface Env {
@@ -26,7 +32,12 @@ const Worker = {
 
     // Parallel check multiple monitors
     // Max concurrent connection is 6 limited by Cloudflare Workers, we use 5 here to be safe
-    type CheckResult = { id: string; location: string; status: { ping: number; up: boolean; err: string } }
+    type CheckResult = {
+      id: string
+      location: string
+      status: { ping: number; up: boolean; err: string }
+      fromConfiguredRegion: boolean
+    }
     let checkQueue: Promise<CheckResult>[] = []
     let checkResult: Record<string, CheckResult> = {};
     const limit = pLimit(5);
@@ -192,6 +203,47 @@ const Worker = {
           console.log('Error calling callback: ')
           console.log(e)
         }
+      }
+
+      // --- probe drift: is this monitor still measuring from its own region? --
+      // Independent of up/down on purpose. A monitor can be perfectly green and
+      // still have stopped being the second vantage point it is named after.
+      const probe = evaluateProbe(
+        state.data,
+        monitor.id,
+        checkResult[monitor.id].fromConfiguredRegion,
+        currentTimeSecond
+      )
+      if (monitor.checkProxy && probe.degraded) {
+        // Logged every run while degraded: `wrangler tail` is the channel that
+        // works even with no webhook configured.
+        console.log(
+          `[probe-drift] ${monitor.id}: configured region ${monitor.checkProxy} has not ` +
+            `answered for ${probe.staleFor}s (>= ${PROBE_DRIFT_RUNS} runs); measuring from ` +
+            `${checkLocation} instead`
+        )
+      }
+      if (monitor.checkProxy && (probe.crossed || probe.recovered)) {
+        // Notified once per transition, not per run — the point of N is to not
+        // trade silence for alarm fatigue.
+        const message = probe.crossed
+          ? formatProbeDriftNotification(
+              monitor.name,
+              monitor.checkProxy,
+              checkLocation,
+              probe.staleFor
+            )
+          : formatProbeRecoveryNotification(monitor.name, monitor.checkProxy)
+        console.log(message)
+        if (workerConfig.notification?.webhook) {
+          try {
+            await webhookNotify(workerConfig.notification.webhook, message)
+          } catch (e) {
+            console.log('Error sending probe drift notification: ' + e)
+          }
+        }
+        // Force the state write so `probeOkAt` and the alert cannot drift apart.
+        statusChanged = true
       }
 
       // append to latency data

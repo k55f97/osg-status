@@ -152,4 +152,23 @@ export type MonitorStateCompacted = {
       time: string // Hex encoded Uint32Array
     }
   >
+
+  // Probe health per monitor — unix seconds of the most recent run whose check
+  // actually came back from the monitor's CONFIGURED region (`checkProxy`).
+  //
+  // Why this exists: with `checkProxyFallback: true` a probe outage is silent.
+  // monitor.ts falls back to a local re-check, `checkLocation` keeps the local
+  // colo, and the page stays honest — it names the place it really measured.
+  // Nothing anywhere says the configured region has stopped answering, so a
+  // permanently dead Durable Object degrades a two-region page to a one-region
+  // page without a single signal. This field is that signal.
+  //
+  // A timestamp, deliberately not a run counter: the state is only written when
+  // something changed or after `kvWriteCooldownMinutes` (index.ts:239-249), so
+  // an increment-per-run counter would silently lose the runs in between. A
+  // timestamp is idempotent and survives skipped writes.
+  //
+  // Optional: states written before this change simply don't have it, and the
+  // clock starts on the first run after the deploy.
+  probeOkAt?: Record<string, number> // monitor id -> unix seconds
 }
