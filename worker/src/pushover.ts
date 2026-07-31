@@ -45,8 +45,14 @@ export async function pushoverNotify(
   message: string,
   isUp: boolean,
   monitorName: string,
-  timeoutMs = 8000
+  timeoutMs = 8000,
+  // Label for events that are neither an outage nor a recovery — currently the
+  // probe-drift finding from worker/src/probe.ts, which is an operations fact
+  // about our own vantage point, not about the monitored service. Omitted for
+  // the normal status change, which keeps the UP/DOWN wording unchanged.
+  eventLabel?: string
 ): Promise<boolean> {
+  const label = eventLabel ?? (isUp ? 'UP' : 'DOWN')
   const token = env?.PUSHOVER_TOKEN?.trim()
   const user = env?.PUSHOVER_USER?.trim()
 
@@ -57,9 +63,7 @@ export async function pushoverNotify(
     // FAIL-CLOSED: no credential -> no alert. Say so loudly instead of
     // returning quietly, otherwise this looks exactly like "all is well".
     console.error(
-      `${ALERT_CHANNEL_BROKEN} Pushover alert for "${monitorName}" (${
-        isUp ? 'UP' : 'DOWN'
-      }) was NOT sent: missing Worker secret(s) ${missing.join(
+      `${ALERT_CHANNEL_BROKEN} Pushover alert for "${monitorName}" (${label}) was NOT sent: missing Worker secret(s) ${missing.join(
         ' and '
       )}. Nobody is being notified about outages. Fix: set the GitHub repository secret(s) ` +
         `${missing.join(' and ')} on k55f97/osg-status; deploy.yml passes them as TF_VAR_* and ` +
@@ -72,7 +76,7 @@ export async function pushoverNotify(
   const body = new URLSearchParams({
     token: token as string,
     user: user as string,
-    title: `OpenShopGraph Status: ${monitorName} ${isUp ? 'recovered' : 'DOWN'}`,
+    title: `OpenShopGraph Status: ${monitorName} ${eventLabel ?? (isUp ? 'recovered' : 'DOWN')}`,
     message,
     priority: isUp ? '0' : '1',
   })
@@ -96,7 +100,7 @@ export async function pushoverNotify(
       )
       return false
     }
-    console.log(`Pushover alert sent for "${monitorName}" (${isUp ? 'UP' : 'DOWN'}): ${text}`)
+    console.log(`Pushover alert sent for "${monitorName}" (${label}): ${text}`)
     return true
   } catch (e) {
     console.error(

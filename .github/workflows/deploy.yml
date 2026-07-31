@@ -5,6 +5,17 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# Least privilege, pinned in the workflow instead of inherited from the repo's
+# `default_workflow_permissions` setting. This job carries CLOUDFLARE_API_TOKEN
+# and runs `terraform apply`; if that setting is ever flipped to
+# read-and-write — or a new repo is derived from this one — the ambient
+# GITHUB_TOKEN would silently gain write access to the repository inside
+# exactly that run. `contents: read` is all `actions/checkout` needs; nothing
+# in this workflow or in deploy/*.py touches the GitHub API.
+# Top-level, not per-job, so a job added later inherits the restriction.
+permissions:
+  contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

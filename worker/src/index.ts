@@ -3,6 +3,7 @@ import { MonitorTarget } from '../../types/config'
 import { workerConfig } from '../../uptime.config'
 import { doMonitor, getStatus } from './monitor'
 import { formatAndNotify, getWorkerLocation, webhookNotify } from './util'
+import { pushoverNotify } from './pushover'
 import { CompactedMonitorStateWrapper, getFromStore, setToStore } from './store'
 import {
   evaluateProbe,
@@ -256,6 +257,23 @@ const Worker = {
             console.log('Error sending probe drift notification: ' + e)
           }
         }
+        // MERGE RESOLUTION (probe-drift x alert-channel): the webhook above is
+        // the only channel the probe-drift change could use when it was written,
+        // and `notification.webhook` is unset for good — its credentials would
+        // have to be committed into this PUBLIC repo (uptime.config.ts). Left
+        // alone, the two changes would have combined into a finding that never
+        // reaches anyone. It is therefore sent over the same Pushover channel as
+        // an outage, but labelled as neither UP nor DOWN and at normal priority:
+        // a moved vantage point is an operations fact, not a user-visible
+        // outage, and must not bypass quiet hours the way a real outage does.
+        await pushoverNotify(
+          env,
+          message,
+          true,
+          monitor.name,
+          undefined,
+          probe.crossed ? 'check region degraded' : 'check region recovered'
+        )
         // Force the state write so `probeOkAt` and the alert cannot drift apart.
         statusChanged = true
       }
