@@ -358,6 +358,12 @@ export async function doMonitor(monitor: MonitorTarget, defaultLocation: string,
   let checkLocation = defaultLocation
   let status
 
+  // Did this run actually measure from the region the monitor is configured for?
+  // A monitor without `checkProxy` is configured for "wherever the cron runs",
+  // so the local colo IS its configured region and it is true by definition.
+  // With a `checkProxy` it only becomes true when the proxy really answered.
+  let fromConfiguredRegion = monitor.checkProxy === undefined
+
   if (monitor.checkProxy) {
     // Initiate a check using proxy (Geo-specific monitoring)
     try {
@@ -389,9 +395,14 @@ export async function doMonitor(monitor: MonitorTarget, defaultLocation: string,
       }
       checkLocation = resp.location
       status = resp.status
+      fromConfiguredRegion = true
     } catch (err) {
       console.log(`[${monitor.id}] Error calling proxy: ${err}`)
       if (monitor.checkProxyFallback) {
+        // `fromConfiguredRegion` stays false: the target was measured, but NOT
+        // from `monitor.checkProxy`. `checkLocation` keeps `defaultLocation`,
+        // i.e. the local colo — which is the honest answer for the page and at
+        // the same time the whole reason this branch is invisible.
         console.log('Falling back to local check...')
         status = await getStatus(monitor)
       } else {
@@ -410,5 +421,6 @@ export async function doMonitor(monitor: MonitorTarget, defaultLocation: string,
     location: checkLocation,
     status,
     id: monitor.id,
+    fromConfiguredRegion,
   }
 }

@@ -5,6 +5,17 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# Least privilege, pinned in the workflow instead of inherited from the repo's
+# `default_workflow_permissions` setting. This job carries CLOUDFLARE_API_TOKEN
+# and runs `terraform apply`; if that setting is ever flipped to
+# read-and-write — or a new repo is derived from this one — the ambient
+# GITHUB_TOKEN would silently gain write access to the repository inside
+# exactly that run. `contents: read` is all `actions/checkout` needs; nothing
+# in this workflow or in deploy/*.py touches the GitHub API.
+# Top-level, not per-job, so a job added later inherits the restriction.
+permissions:
+  contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -106,6 +117,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
           D1_ID: ${{ env.D1_ID }}
+          # Alert channel (worker/src/pushover.ts). If these repository secrets
+          # are unset the apply still succeeds, the bindings are simply omitted,
+          # and the worker logs "[ALERT-CHANNEL-BROKEN] … missing Worker
+          # secret(s) …" for every alert it could not deliver.
+          TF_VAR_PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          TF_VAR_PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
 
       # Currently Terraform Cloudflare provider doesn't support direct upload, use wrangler to upload instead.
       - name: Upload pages

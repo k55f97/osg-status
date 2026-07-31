@@ -2,13 +2,26 @@ import { DurableObject } from 'cloudflare:workers'
 import { MonitorTarget } from '../../types/config'
 import { workerConfig } from '../../uptime.config'
 import { doMonitor, getStatus } from './monitor'
-import { formatAndNotify, getWorkerLocation } from './util'
+import { formatAndNotify, getWorkerLocation, webhookNotify } from './util'
+import { pushoverNotify } from './pushover'
 import { CompactedMonitorStateWrapper, getFromStore, setToStore } from './store'
+import {
+  evaluateProbe,
+  formatProbeDriftNotification,
+  formatProbeRecoveryNotification,
+  PROBE_DRIFT_RUNS,
+} from './probe'
 import pLimit from 'p-limit'
 
 export interface Env {
   REMOTE_CHECKER_DO: DurableObjectNamespace<RemoteChecker>
   UPTIMEFLARE_D1: D1Database
+  // Pushover alert channel (worker/src/pushover.ts). Bound as Worker SECRETS
+  // by deploy.tf from the GitHub repository secrets of the same name — never
+  // committed, this repository is public. Optional in the type on purpose:
+  // when they are absent the run must still work and must SAY they are absent.
+  PUSHOVER_TOKEN?: string
+  PUSHOVER_USER?: string
 }
 
 const Worker = {
@@ -26,7 +39,12 @@ const Worker = {
 
     // Parallel check multiple monitors
     // Max concurrent connection is 6 limited by Cloudflare Workers, we use 5 here to be safe
-    type CheckResult = { id: string; location: string; status: { ping: number; up: boolean; err: string } }
+    type CheckResult = {
+      id: string
+      location: string
+      status: { ping: number; up: boolean; err: string }
+      fromConfiguredRegion: boolean
+    }
     let checkQueue: Promise<CheckResult>[] = []
     let checkResult: Record<string, CheckResult> = {};
     const limit = pLimit(5);
@@ -77,7 +95,14 @@ const Worker = {
               currentTimeSecond - lastIncident.start[0] >=
                 (workerConfig.notification.gracePeriod + 1) * 60 - 30
             ) {
-              await formatAndNotify(monitor, true, lastIncident.start[0], currentTimeSecond, 'OK')
+              await formatAndNotify(
+                env,
+                monitor,
+                true,
+                lastIncident.start[0],
+                currentTimeSecond,
+                'OK'
+              )
             } else {
               console.log(
                 `grace period (${workerConfig.notification?.gracePeriod}m) not met, skipping webhook UP notification for ${monitor.name}`
@@ -145,6 +170,7 @@ const Worker = {
               )
             } else {
               await formatAndNotify(
+                env,
                 monitor,
                 false,
                 currentIncident.start[0],
@@ -192,6 +218,64 @@ const Worker = {
           console.log('Error calling callback: ')
           console.log(e)
         }
+      }
+
+      // --- probe drift: is this monitor still measuring from its own region? --
+      // Independent of up/down on purpose. A monitor can be perfectly green and
+      // still have stopped being the second vantage point it is named after.
+      const probe = evaluateProbe(
+        state.data,
+        monitor.id,
+        checkResult[monitor.id].fromConfiguredRegion,
+        currentTimeSecond
+      )
+      if (monitor.checkProxy && probe.degraded) {
+        // Logged every run while degraded: `wrangler tail` is the channel that
+        // works even with no webhook configured.
+        console.log(
+          `[probe-drift] ${monitor.id}: configured region ${monitor.checkProxy} has not ` +
+            `answered for ${probe.staleFor}s (>= ${PROBE_DRIFT_RUNS} runs); measuring from ` +
+            `${checkLocation} instead`
+        )
+      }
+      if (monitor.checkProxy && (probe.crossed || probe.recovered)) {
+        // Notified once per transition, not per run — the point of N is to not
+        // trade silence for alarm fatigue.
+        const message = probe.crossed
+          ? formatProbeDriftNotification(
+              monitor.name,
+              monitor.checkProxy,
+              checkLocation,
+              probe.staleFor
+            )
+          : formatProbeRecoveryNotification(monitor.name, monitor.checkProxy)
+        console.log(message)
+        if (workerConfig.notification?.webhook) {
+          try {
+            await webhookNotify(workerConfig.notification.webhook, message)
+          } catch (e) {
+            console.log('Error sending probe drift notification: ' + e)
+          }
+        }
+        // MERGE RESOLUTION (probe-drift x alert-channel): the webhook above is
+        // the only channel the probe-drift change could use when it was written,
+        // and `notification.webhook` is unset for good — its credentials would
+        // have to be committed into this PUBLIC repo (uptime.config.ts). Left
+        // alone, the two changes would have combined into a finding that never
+        // reaches anyone. It is therefore sent over the same Pushover channel as
+        // an outage, but labelled as neither UP nor DOWN and at normal priority:
+        // a moved vantage point is an operations fact, not a user-visible
+        // outage, and must not bypass quiet hours the way a real outage does.
+        await pushoverNotify(
+          env,
+          message,
+          true,
+          monitor.name,
+          undefined,
+          probe.crossed ? 'check region degraded' : 'check region recovered'
+        )
+        // Force the state write so `probeOkAt` and the alert cannot drift apart.
+        statusChanged = true
       }
 
       // append to latency data
