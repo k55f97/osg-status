@@ -86,6 +86,16 @@ jobs:
         run: |
           npx @cloudflare/next-on-pages
 
+      # The "Upload pages" step at the end of this job REPLACES the live site
+      # with the contents of .vercel/output/static. The build above is
+      # fail-closed against its own crash — a non-zero exit stops the job — but
+      # not against exiting 0 with an empty or truncated directory, and until
+      # now nothing between the build and the upload looked inside it. Assert
+      # the output here, before `terraform apply`, so a broken build stops the
+      # run while Cloudflare is still untouched.
+      - name: Verify page build output
+        run: scripts/verify-pages-output.sh
+
       - name: Create D1 database and tables
         run: |
           python3 deploy/init_d1.py  # This sets D1_ID in GITHUB_ENV
