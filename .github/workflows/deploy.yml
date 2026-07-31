@@ -19,6 +19,24 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # `workflow_dispatch` above can be pointed at ANY ref, and the ruleset
+    # `main-protection` only governs pushes to main — it does not govern
+    # workflow runs. Without this binding, a dispatch from any side branch
+    # runs `terraform apply` + `wrangler pages deploy` against production
+    # with CLOUDFLARE_API_TOKEN, unreviewed and without any status check.
+    # The `production` environment carries a deployment_branch_policy that
+    # allows `main` only; a job bound to it is refused BEFORE its first
+    # step, so the secrets are never bound.
+    # Measured 2026-07-31 in this repo (run 30597988048, branch
+    # probe/env-gate): 'Branch "probe/env-gate" is not allowed to deploy to
+    # production due to environment protection rules.' — 0 steps executed.
+    # LIMIT: workflow_dispatch executes the file from the CHOSEN ref, so
+    # this line only protects refs that carry it. Side branches with an
+    # older copy of deploy.yml stay dispatchable. The ref-independent
+    # closure is to move CLOUDFLARE_API_TOKEN/ACCOUNT_ID/PUSHOVER_* from
+    # repository scope to `production` environment scope — then an ungated
+    # run receives an empty value (measured: SECRET_LEN=0 vs 20).
+    environment: production
     steps:
       - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
 
