@@ -44,6 +44,26 @@ const workerConfig: WorkerConfig = {
       headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
     },
     {
+      id: 'api_ready',
+      name: 'API Readiness',
+      method: 'GET',
+      target: 'https://api.openshopgraph.org/ready',
+      // Different question than api_health above: /health says "the process
+      // is alive", /ready says "I can serve real requests" — it runs a real
+      // DB query (repos.shops.count()) and fails closed with 503+reason if
+      // that query fails. Same expectedCodes semantics as api_health: only
+      // 200 passes, 503 (or any other code) counts as down. Verified against
+      // worker/src/monitor.ts:getStatus (this file's own check function,
+      // unmodified) with a local test target: 200 -> up:true, 503 -> up:false
+      // with err "Expected codes: [200], Got: 503". Before this entry, /ready
+      // had no caller at all — no readinessProbe, no compose check, no
+      // monitoring script, just an OpenAPI doc line.
+      tooltip: 'Public API readiness (DB reachable), separate from /health',
+      expectedCodes: [200],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+    },
+    {
       id: 'mcp',
       name: 'AI Agent Interface (MCP)',
       method: 'GET',
