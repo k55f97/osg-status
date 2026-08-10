@@ -1,6 +1,12 @@
 # This is a script to migrate state from KV to D1 database.
 # It reads the state from KV namespace, compacts it, and writes it to D1 database.
 # It also deletes the KV namespace after a successful migration.
+#
+# NOT called from .github/workflows/deploy.yml anymore (removed 2026-08-10).
+# Migration is done: two production runs (2026-07-31, 2026-08-10) each
+# confirmed no KV namespace named "uptimeflare_kv" exists in the account
+# anymore, and no code path in this repo reads from KV. Kept here as a
+# record of the completed migration, not deleted.
 import requests
 import os
 import json
