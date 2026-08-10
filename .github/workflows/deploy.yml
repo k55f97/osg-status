@@ -1,5 +1,37 @@
 name: Deploy to Cloudflare
 
+# RUNNER CHOICE — `ubuntu-latest`, deliberately, against the house rule
+# "everything self-hosted on the Mac mini, no ubuntu-latest". The rule's
+# reasoning does not reach this repository, and the exception is not new:
+# ci.yml in this same directory already carries it in full, and its wording
+# ("deploy.yml already runs on ubuntu-latest") treats THIS file as the
+# established case. Restated here so the two files stop depending on each
+# other's headers:
+#   * This repository is PUBLIC (a fork of lyc8503/UptimeFlare). A
+#     self-hosted runner on a public repo executes unreviewed fork-PR code on
+#     our own hardware. That trust boundary is why self-hosted is acceptable
+#     in openshopgraph / openshopgraph2 ("private and solo") and not here.
+#   * There is no self-hosted runner to move to. Measured 2026-08-10:
+#     `GET /repos/k55f97/osg-status/actions/runners` -> `total_count: 0`
+#     (openshopgraph, for contrast, reports `mini-api online`). Switching
+#     `runs-on` today would queue this job forever, not harden it.
+#   * The cost argument behind self-hosted does not apply: Actions minutes
+#     are free for public repositories.
+# NOT covered by the QUEUE 561a decision of 2026-08-05 — that one grants
+# exactly one ubuntu-latest required check per repo via `notanker.yml`, in
+# four repositories, and this is not one of them. There is no `notanker.yml`
+# here. This header is the repo-local justification that notanker.yml's own
+# text demands ("every ubuntu-latest job needs its own owner decision named
+# in its header"), and it is a statement of the measured situation, not an
+# owner ruling.
+# WHAT IT COSTS, stated plainly: unlike prisma-migrate.yml in openshopgraph
+# (a throwaway Postgres inside the runner, zero secrets), this job binds
+# CLOUDFLARE_API_TOKEN and runs `terraform apply` + `wrangler pages deploy`
+# against the REAL Cloudflare account. GitHub-hosted is the right call for
+# the reasons above; it is not the cheap call. The compensating controls are
+# the two below: `permissions: contents: read` and the `production`
+# environment binding.
+
 on:
   push:
     branches: ['main']
