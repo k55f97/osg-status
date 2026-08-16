@@ -1,5 +1,6 @@
 import { MonitorState, MonitorTarget } from '@/types/config'
 import { getColor } from '@/util/color'
+import { formatDate, formatHourMinute } from '@/util/datetime'
 import { Box, Tooltip, Modal } from '@mantine/core'
 import { useResizeObserver } from '@mantine/hooks'
 import { useState } from 'react'
@@ -63,14 +64,8 @@ export default function DetailBar({
           partEnd = Math.min(partEnd, dayEnd)
 
           if (overlapLen(dayStart, dayEnd, partStart, partEnd) > 0) {
-            const startStr = new Date(partStart * 1000).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-            const endStr = new Date(partEnd * 1000).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
+            const startStr = formatHourMinute(new Date(partStart * 1000))
+            const endStr = formatHourMinute(new Date(partEnd * 1000))
             incidentReasons.push(`[${startStr}-${endStr}] ${incident.error[i]}`)
           }
         }
@@ -94,7 +89,7 @@ export default function DetailBar({
               <div>
                 {t('percent at date', {
                   percent: dayPercent,
-                  date: new Date(dayStart * 1000).toLocaleDateString(),
+                  date: formatDate(new Date(dayStart * 1000)),
                 })}
               </div>
               {dayDownTime > 0 && (
@@ -124,7 +119,7 @@ export default function DetailBar({
               setModalTitle(
                 t('incidents at', {
                   name: monitor.name,
-                  date: new Date(dayStart * 1000).toLocaleDateString(),
+                  date: formatDate(new Date(dayStart * 1000)),
                 })
               )
               setModelContent(

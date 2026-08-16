@@ -5,30 +5,71 @@
 // Don't edit this line
 import { MaintenanceConfig, PageConfig, WorkerConfig } from './types/config'
 
+// CANONICAL HOST: openshopgraph.com
+//
+// openshopgraph.org and api.openshopgraph.org are redirects to the .com
+// hostnames and nothing else (measured 2026-08-17):
+//   https://openshopgraph.org/en/          301 -> https://openshopgraph.com/en/
+//   https://api.openshopgraph.org/<path>   308 -> https://api.openshopgraph.com/<path>
+// Every target and every visitor-facing link below therefore names .com. The
+// .org names stay alive as redirects so existing references keep working; they
+// are simply not what this page should measure or point at.
 const pageConfig: PageConfig = {
   title: 'OpenShopGraph Status',
-  // Same icon the main site serves at openshopgraph.org/favicon.svg
+  // Same icon the main site serves at /favicon.svg
   // (replaces the UptimeFlare default favicon.png, now deleted).
   favicon: '/favicon.svg',
-  links: [{ link: 'https://openshopgraph.org', label: 'openshopgraph.org', highlight: true }],
+  links: [{ link: 'https://openshopgraph.com', label: 'openshopgraph.com', highlight: true }],
   // Chrome/copy only — swaps the default "made with UptimeFlare" line for
-  // one matching openshopgraph.org's footer tone ("Verified data, not
+  // one matching openshopgraph.com's footer tone ("Verified data, not
   // ads."). Monitor semantics below are untouched.
   customFooter:
-    '<p class="osg-footer">Verified data, not ads. Independent status page for <a href="https://openshopgraph.org" target="_blank" rel="noopener">openshopgraph.org</a> — powered by <a href="https://github.com/lyc8503/UptimeFlare" target="_blank" rel="noopener">UptimeFlare</a>.</p>',
+    '<p class="osg-footer">Verified data, not ads. Independent status page for <a href="https://openshopgraph.com" target="_blank" rel="noopener">openshopgraph.com</a> — powered by <a href="https://github.com/lyc8503/UptimeFlare" target="_blank" rel="noopener">UptimeFlare</a>.</p>',
 }
 
 const workerConfig: WorkerConfig = {
   // Reduce D1 write frequency (free-tier friendly); checks still run every minute.
   kvWriteCooldownMinutes: 3,
+  //
+  // TARGET RULE: point every monitor at the address that actually serves the
+  // response — never at a redirect to it, never at a path the service does not
+  // serve. Two distinct traps, both measured 2026-08-17:
+  //
+  // 1. REDIRECTS. Until this change all five monitors named .org, so each check
+  //    was two requests, not one. monitor.ts:313 calls fetch() without a
+  //    `redirect` option, and the Workers default is `redirect: 'follow'` — so
+  //    the hop is followed silently and `response.status` is the FINAL 200. The
+  //    redirect is therefore invisible in the recorded state: it never showed
+  //    up as a status, only as latency. Cost, 3 runs each, curl -L:
+  //      openshopgraph.org/en/        0.430 s, 2 TLS connects
+  //      openshopgraph.com/en/        0.198 s, 1 TLS connect
+  //      api.openshopgraph.org/health 0.544 s, 2 TLS connects
+  //      api.openshopgraph.com/health 0.223 s, 1 TLS connect
+  //    Every response time this page has ever published was roughly DOUBLE the
+  //    service's own, because it timed the redirect too. And because both hops
+  //    collapse into one status, "the redirect broke" and "the origin broke"
+  //    were the same red bar with no way to tell them apart.
+  //
+  // 2. WRONG PATH. api.openshopgraph.com/ returns 404 on the bare root — only
+  //    /health, /ready and /mcp are served. A monitor aimed at the API root
+  //    would sit at a permanent, meaningless red. No monitor here does that;
+  //    the entries below name explicit paths on purpose. Do not "simplify" one
+  //    to the bare host.
+  //
+  // Verified for each target below before it was written in (curl, no -L, so
+  // the first response is the one shown):
+  //   https://openshopgraph.com/en/          200
+  //   https://api.openshopgraph.com/health   200
+  //   https://api.openshopgraph.com/ready    200
+  //   https://api.openshopgraph.com/mcp      405  (within expectedCodes)
   monitors: [
     {
       id: 'website',
       name: 'Website',
       method: 'GET',
-      target: 'https://openshopgraph.org/en/',
+      target: 'https://openshopgraph.com/en/',
       tooltip: 'Public website (external HTTPS check)',
-      statusPageLink: 'https://openshopgraph.org',
+      statusPageLink: 'https://openshopgraph.com',
       expectedCodes: [200],
       timeout: 10000,
       headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
@@ -37,7 +78,7 @@ const workerConfig: WorkerConfig = {
       id: 'api_health',
       name: 'API',
       method: 'GET',
-      target: 'https://api.openshopgraph.org/health',
+      target: 'https://api.openshopgraph.com/health',
       tooltip: 'Public API health endpoint',
       expectedCodes: [200],
       timeout: 10000,
@@ -47,7 +88,7 @@ const workerConfig: WorkerConfig = {
       id: 'api_ready',
       name: 'API Readiness',
       method: 'GET',
-      target: 'https://api.openshopgraph.org/ready',
+      target: 'https://api.openshopgraph.com/ready',
       // Different question than api_health above: /health says "the process
       // is alive", /ready says "I can serve real requests" — it runs a real
       // DB query (repos.shops.count()) and fails closed with 503+reason if
@@ -67,7 +108,7 @@ const workerConfig: WorkerConfig = {
       id: 'mcp',
       name: 'AI Agent Interface (MCP)',
       method: 'GET',
-      target: 'https://api.openshopgraph.org/mcp',
+      target: 'https://api.openshopgraph.com/mcp',
       tooltip: 'MCP endpoint reachability (auth required, 401 = alive)',
       // Endpoint requires auth; a 401 proves the service is up and routing.
       expectedCodes: [200, 401, 405, 406],
@@ -115,9 +156,9 @@ const workerConfig: WorkerConfig = {
       id: 'website_enam',
       name: 'Website (North America)',
       method: 'GET',
-      target: 'https://openshopgraph.org/en/',
+      target: 'https://openshopgraph.com/en/',
       tooltip: 'Public website, checked from a North American vantage point',
-      statusPageLink: 'https://openshopgraph.org',
+      statusPageLink: 'https://openshopgraph.com',
       expectedCodes: [200],
       timeout: 10000,
       headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },

@@ -4,6 +4,7 @@ import { IconCircleCheck, IconAlertCircle, IconPlus, IconMinus } from '@tabler/i
 import { useEffect, useState } from 'react'
 import MaintenanceAlert from './MaintenanceAlert'
 import { pageConfig } from '@/uptime.config'
+import { formatDateTime } from '@/util/datetime'
 import { useTranslation } from 'react-i18next'
 
 function useWindowVisibility() {
@@ -122,7 +123,7 @@ export default function OverallStatus({
       </Box>
       <Title mt="xs" style={{ textAlign: 'center', color: '#70778c' }} order={6}>
         {t('Last updated on', {
-          date: new Date(state.lastUpdate * 1000).toLocaleString(),
+          date: formatDateTime(new Date(state.lastUpdate * 1000)),
           seconds: currentTime - state.lastUpdate,
         })}
       </Title>
