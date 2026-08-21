@@ -83,3 +83,18 @@ jobs:
 
       - name: Lint (next lint)
         run: npm run lint
+
+      # -----------------------------------------------------------------
+      # EINWEG ZU PUSHOVER — Riegel und Rot-Beweise.
+      # Der gleichnamige Riegel im Kern (k55f97/openshopgraph PR #344) sagt
+      # in seinem Kopf ausdruecklich, dass er ueber DIESES Repo nichts
+      # behauptet. Ohne diesen Schritt waere die Einwegigkeit hier eine
+      # Momentaufnahme statt einer Voraussetzung.
+      # KEIN `continue-on-error`, KEIN `|| true`: ein Pruefschritt, der nicht
+      # rot werden kann, ist per Konstruktion gruen.
+      # -----------------------------------------------------------------
+      - name: Riegel — genau ein Weg zu Pushover
+        run: bash scripts/check-pushover-einweg.sh
+
+      - name: Rot-Beweis — Riegel je Sorte (d,e,g,h)
+        run: bash scripts/test/pushover-einweg.selftest.sh
