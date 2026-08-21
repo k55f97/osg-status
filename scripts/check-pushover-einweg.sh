@@ -59,13 +59,14 @@
 # WARUM ER NICHT AN SICH SELBST SCHEITERT
 # Keine Pfad-Ausnahme fuer sich selbst. Sein Muster traegt maskierte Punkte
 # (`\.`), die den Backslash davor nicht finden. Belegt in
-# ops/test/pushover-einweg.selftest.sh, Fall (e).
+# scripts/test/pushover-einweg.selftest.sh, Fall (e).
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 set -euo pipefail
 set -o pipefail
 
-# EINE Ebene hoch, nicht zwei: dieses Skript liegt in ops/, nicht in
-# ops/mini/ wie sein Geschwister im Frontend-Repo. Mit zwei Ebenen zeigte es
+# EINE Ebene hoch, nicht zwei: dieses Skript liegt in scripts/, direkt unter
+# der Repo-Wurzel — dort, wo dieses Repo seine Pruefskripte haelt
+# (check-probe-drift.ts, verify-pages-output.sh). Mit zwei Ebenen zeigte es
 # auf das ELTERNVERZEICHNIS aller Arbeitsbaeume und meldete 284945 Dateien
 # und 60 Verstoesse aus fremden Repos — gemessen, nicht vermutet.
 WURZEL="${1:-$(cd "$(dirname "$0")/.." && pwd)}"

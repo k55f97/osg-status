@@ -35,7 +35,7 @@ ARBEIT="$(mktemp -d "${TMPDIR:-/tmp}/pushover-einweg-selftest.XXXXXX")"
 # Aufgeraeumt wird NAMENTLICH, nicht rekursiv: dieser Test legt genau drei
 # Dinge an, und ein rekursives Loeschen auf einen konstruierten Pfad ist die
 # Bauform, aus der zwei Verlustvorfaelle stammen.
-NEU="${WURZEL}/ops/ZZZ-mutant-direktaufruf.sh"
+NEU="${WURZEL}/scripts/ZZZ-mutant-direktaufruf.sh"
 aufraeumen() {
   unlink "$NEU" 2>/dev/null || true
   unlink "${ARBEIT}/aus.txt" 2>/dev/null || true
@@ -84,7 +84,7 @@ WIRT='api'; WIRT="${WIRT}.pushover.net"; PFAD='/1/messages'; PFAD="${PFAD}.json"
 } > "$NEU"
 if /usr/bin/grep -qE 'api\.pushover\.net/1/messages\.json' "$NEU"; then
   lauf "$WURZEL"
-  if [ "$RC" = "1" ] && printf '%s' "$AUSGABE" | grep -q 'VERSTOSS  ops/ZZZ-mutant-direktaufruf.sh'; then
+  if [ "$RC" = "1" ] && printf '%s' "$AUSGABE" | grep -q 'VERSTOSS  scripts/ZZZ-mutant-direktaufruf.sh'; then
     melde d GRUEN "$(printf '%s' "$AUSGABE" | grep -E '^ROT: ' | head -1)"
   else
     melde d ROT "eingebauter Direktaufruf blieb unbemerkt (rc=${RC}) -- der Riegel deckt diese Sorte NICHT"

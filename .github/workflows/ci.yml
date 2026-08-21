@@ -94,7 +94,7 @@ jobs:
       # rot werden kann, ist per Konstruktion gruen.
       # -----------------------------------------------------------------
       - name: Riegel — genau ein Weg zu Pushover
-        run: bash ops/check-pushover-einweg.sh
+        run: bash scripts/check-pushover-einweg.sh
 
       - name: Rot-Beweis — Riegel je Sorte (d,e,g,h)
-        run: bash ops/test/pushover-einweg.selftest.sh
+        run: bash scripts/test/pushover-einweg.selftest.sh
