@@ -98,7 +98,15 @@ resource "cloudflare_workers_cron_trigger" "uptimeflare_worker_cron" {
   account_id  = var.CLOUDFLARE_ACCOUNT_ID
   script_name = cloudflare_workers_script.uptimeflare_worker.script_name
   schedules = [{
-    cron = "* * * * *" # every 1 minute, you can reduce the write counts by increase the worker settings of `kvWriteCooldownMinutes`
+    # Was "* * * * *" (every 1 minute) until 2026-09-01. CF log breakdown that
+    # day: OSG-StatusCheck was the single largest UA on openshopgraph.com,
+    # 31.2% of 18k requests/24h (~79% of the "dynamic" bucket) — 5 monitors x
+    # 1,440 fires/day = 7,200 origin requests/day for a PUBLIC STATUS PAGE,
+    # not a paging SLA. At gracePeriod=3 (uptime.config.ts) a 1-minute cron
+    # pages after ~3-4 min of downtime; a 3-minute cron pages after ~9-12 min,
+    # which is fine for an uptime display. New: 5 monitors x 480 fires/day =
+    # 2,400 requests/day (-66.7%).
+    cron = "*/3 * * * *" # every 3 minutes
   }]
 }
 
