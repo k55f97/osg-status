@@ -28,7 +28,8 @@ const pageConfig: PageConfig = {
 }
 
 const workerConfig: WorkerConfig = {
-  // Reduce D1 write frequency (free-tier friendly); checks still run every minute.
+  // Reduce D1 write frequency (free-tier friendly); checks run every 3
+  // minutes since 2026-09-01 (deploy.tf cron, see comment there).
   kvWriteCooldownMinutes: 3,
   //
   // TARGET RULE: point every monitor at the address that actually serves the
@@ -58,7 +59,9 @@ const workerConfig: WorkerConfig = {
   //
   // Verified for each target below before it was written in (curl, no -L, so
   // the first response is the one shown):
-  //   https://openshopgraph.com/en/          200
+  //   https://openshopgraph.com/en/          200  (superseded by /__health
+  //                                                below, 2026-09-01)
+  //   https://openshopgraph.com/__health     200
   //   https://api.openshopgraph.com/health   200
   //   https://api.openshopgraph.com/ready    200
   //   https://api.openshopgraph.com/mcp      405  (within expectedCodes)
@@ -67,8 +70,22 @@ const workerConfig: WorkerConfig = {
       id: 'website',
       name: 'Website',
       method: 'GET',
-      target: 'https://openshopgraph.com/en/',
-      tooltip: 'Public website (external HTTPS check)',
+      // Was 'https://openshopgraph.com/en/' until 2026-09-01. That target is
+      // the full SSR page (frontend-v2 worker/src/index.ts): locale
+      // negotiation, shop-listing queries, templating — the most expensive
+      // path the worker serves, hit twice a minute by this monitor alone.
+      // Switched to /__health, an existing operational endpoint in the same
+      // worker (src/index.ts:2964, function health()) that proves "worker
+      // is up and D1 is reachable" without rendering a page: it runs 1-2
+      // small COUNT queries (measured 2026-09-01 via curl:
+      // rows_total 3090, category_rows_total 1 sink, 176 rows) instead of
+      // building shop-listing HTML. Not zero-DB, but not a page render
+      // either. Verified 2026-09-01: curl -I -> 200, curl body ->
+      // {"sinks":1,"rows_total":3090,"category_rows_total":176,...}.
+      // If it ever returns non-2xx (D1 vacuum tripped, e.g. 0 rows) that is
+      // itself a real outage signal, same as the page would have been.
+      target: 'https://openshopgraph.com/__health',
+      tooltip: 'Public website worker (lightweight health check, no full page render)',
       statusPageLink: 'https://openshopgraph.com',
       expectedCodes: [200],
       timeout: 10000,
@@ -156,8 +173,12 @@ const workerConfig: WorkerConfig = {
       id: 'website_enam',
       name: 'Website (North America)',
       method: 'GET',
-      target: 'https://openshopgraph.com/en/',
-      tooltip: 'Public website, checked from a North American vantage point',
+      // Same swap and same reasoning as the 'website' monitor above
+      // (2026-09-01): /__health instead of /en/ — worker+D1 reachability
+      // without a full page render, verified 200 from this vantage point's
+      // origin the same day.
+      target: 'https://openshopgraph.com/__health',
+      tooltip: 'Public website worker, checked from a North American vantage point (lightweight health check)',
       statusPageLink: 'https://openshopgraph.com',
       expectedCodes: [200],
       timeout: 10000,
