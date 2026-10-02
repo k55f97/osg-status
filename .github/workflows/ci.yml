@@ -98,3 +98,14 @@ jobs:
 
       - name: Rot-Beweis — Riegel je Sorte (d,e,g,h)
         run: bash scripts/test/pushover-einweg.selftest.sh
+
+      # -----------------------------------------------------------------
+      # EU-SONDE — jeder Primaer-Monitor braucht einen `<id>_weur`-Zwilling.
+      # Riegel prueft die KONFIGURATION (nicht, dass die Sonde deployt ist).
+      # Rot-Beweis je Sorte im Selbsttest; KEIN `|| true`.
+      # -----------------------------------------------------------------
+      - name: Riegel — EU-Zwilling je Primaer-Monitor
+        run: npx --yes tsx@4 scripts/check-eu-sonde.ts
+
+      - name: Rot-Beweis — EU-Riegel je Sorte
+        run: npx --yes tsx@4 scripts/test/eu-sonde.selftest.ts

@@ -187,8 +187,83 @@ const workerConfig: WorkerConfig = {
       // See above — never remove this without removing checkProxy too.
       checkProxyFallback: true,
     },
-    // Further regions (apac, weur, …) stay OFF until this one has carried a
-    // full window cleanly. Same shape, one entry each, fallback always true.
+    // ---------------------------------------------------------------------
+    // EUROPEAN VANTAGE POINT — one twin per primary monitor (added 2026-10-02).
+    //
+    // Why: the published service targets for API and MCP availability were
+    // violated over a 30-day window, and every one of those numbers came from
+    // KIX (Osaka). The origin and the users sit in Europe; no monitor
+    // measured from there. From Osaka, "the origin is down" and "the route
+    // Osaka -> origin is down" are the same red bar. The twins
+    // below measure the SAME target with the SAME expectedCodes from a
+    // western-European Durable Object (`worker://weur`), so the two causes
+    // finally separate: red only in KIX = route/probe, red in both = service.
+    //
+    // Same shape as website_enam: ONE checkProxy per monitor, so one twin per
+    // primary, `checkProxyFallback: true` mandatory (see the long comment
+    // above). `weur` is a location HINT, not a pin: the colo that actually
+    // answered is recorded per sample as `loc`, and the page never claims a
+    // region it did not measure. Probe loss is surfaced by worker/src/probe.ts.
+    //
+    // Load: cron is every 3 minutes (deploy.tf), 2 RPC calls per check =
+    // 960 DO requests/day per twin; 4 twins + website_enam = 4,800/day of the
+    // 100,000/day free cap (4.8 %).
+    //
+    // THE RULE THIS BLOCK IS HELD TO is scripts/check-eu-sonde.ts (CI): every
+    // monitor without checkProxy needs a `<id>_weur` twin with identical
+    // target/method/expectedCodes and checkProxyFallback true. A new primary
+    // monitor without a twin turns CI red — the EU gap cannot silently
+    // reopen. Do not edit a twin's target without editing its primary.
+    {
+      id: 'website_weur',
+      name: 'Website (Europe)',
+      method: 'GET',
+      target: 'https://openshopgraph.com/__health',
+      tooltip: 'Public website worker, checked from a European vantage point (lightweight health check)',
+      statusPageLink: 'https://openshopgraph.com',
+      expectedCodes: [200],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+      checkProxy: 'worker://weur',
+      checkProxyFallback: true,
+    },
+    {
+      id: 'api_health_weur',
+      name: 'API (Europe)',
+      method: 'GET',
+      target: 'https://api.openshopgraph.com/health',
+      tooltip: 'Public API health endpoint, checked from a European vantage point',
+      expectedCodes: [200],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+      checkProxy: 'worker://weur',
+      checkProxyFallback: true,
+    },
+    {
+      id: 'api_ready_weur',
+      name: 'API Readiness (Europe)',
+      method: 'GET',
+      target: 'https://api.openshopgraph.com/ready',
+      tooltip: 'Public API readiness (DB reachable), checked from a European vantage point',
+      expectedCodes: [200],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+      checkProxy: 'worker://weur',
+      checkProxyFallback: true,
+    },
+    {
+      id: 'mcp_weur',
+      name: 'AI Agent Interface (MCP) (Europe)',
+      method: 'GET',
+      target: 'https://api.openshopgraph.com/mcp',
+      tooltip: 'MCP endpoint reachability (auth required, 401 = alive), checked from a European vantage point',
+      expectedCodes: [200, 401, 405, 406],
+      timeout: 10000,
+      headers: { 'User-Agent': 'OSG-StatusCheck/1.0 (UptimeFlare)' },
+      checkProxy: 'worker://weur',
+      checkProxyFallback: true,
+    },
+    // Further regions (apac, …) stay OFF. Same shape, one twin per primary.
     // ---------------------------------------------------------------------
   ],
   notification: {
