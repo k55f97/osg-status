@@ -84,6 +84,11 @@ jobs:
       - name: Lint (next lint)
         run: npm run lint
 
+      # SEO-Basis im initialen HTML (title/description/h1/canonical, kein noindex):
+      # rendert die echten Komponenten, mit Rot-Beweisen je Sorte.
+      - name: SEO head test (initial HTML)
+        run: node --test scripts/test/seo-html.test.mjs
+
       # -----------------------------------------------------------------
       # EINWEG ZU PUSHOVER — Riegel und Rot-Beweise.
       # Der gleichnamige Riegel im Kern (k55f97/openshopgraph PR #344) sagt
