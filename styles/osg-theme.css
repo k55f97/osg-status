@@ -124,3 +124,23 @@ body {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Server-rendered intro (components/SeoMarkup.tsx): the h1 + one sentence that
+   crawlers read before JS runs. Kept small; the app header below carries the UI. */
+.osg-seo-intro {
+  max-width: 810px;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+  text-align: center;
+}
+.osg-seo-intro h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+.osg-seo-intro p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--mantine-color-dimmed);
+}
