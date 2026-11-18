@@ -51,7 +51,7 @@ export default function MonitorDetail({
         style={{
           width: '1.25em',
           height: '1.25em',
-          color: '#fab005',
+          color: 'var(--osg-degraded, #b35c0a)',
           marginRight: '3px',
         }}
       />

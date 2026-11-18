@@ -65,6 +65,8 @@ export default function DetailChart({
     },
     plugins: {
       tooltip: {
+        // One unnamed series: the default colour square explained nothing.
+        displayColors: false,
         callbacks: {
           label: (item: any) => {
             if (item.parsed.y) {

@@ -56,7 +56,7 @@ export default function OverallStatus({
     bannerBg = 'var(--osg-down)'
     bannerIcon = <IconAlertCircle style={{ width: 28, height: 28, color: '#fff', flex: '0 0 auto' }} />
   } else if (state.overallDown > 0) {
-    bannerBg = 'var(--osg-degraded, #d98a2b)'
+    bannerBg = 'var(--osg-degraded, #b35c0a)'
     bannerIcon = <IconAlertCircle style={{ width: 28, height: 28, color: '#fff', flex: '0 0 auto' }} />
   }
 
@@ -107,6 +107,9 @@ export default function OverallStatus({
           weaker than status.claude.com's full-width banner). */}
       <Box
         style={{
+          // Same width as the monitor card below (MonitorList.tsx), centred.
+          maxWidth: groupedMonitor ? '897px' : '865px',
+          margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
           gap: '14px',
