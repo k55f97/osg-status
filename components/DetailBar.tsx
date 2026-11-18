@@ -104,6 +104,7 @@ export default function DetailBar({
         }
       >
         <div
+          className="osg-bar"
           style={{
             height: '42px',
             // claude.com-style: 30 bars share the full row width.

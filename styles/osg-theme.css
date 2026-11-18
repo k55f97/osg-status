@@ -36,6 +36,7 @@
      no yellow/orange gradations (owner decision 2026-07-13). */
   --osg-ok: #1f7a4d; /* --ok (site-tokens.css) */
   --osg-down: #b91c1c;
+  --osg-degraded: #b35c0a; /* white text 4.7:1 (was #d98a2b, 2.8:1) */
   --osg-nodata: #d6d3cb;
 
   --mantine-color-body: #f7f6f3; /* --paper */
@@ -123,4 +124,10 @@ body {
   color: var(--mantine-color-text);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* ---------- Day bars (DetailBar.tsx): show which bar the tooltip belongs to ---------- */
+.osg-bar:hover {
+  outline: 2px solid var(--mantine-color-text);
+  outline-offset: 1px;
 }
